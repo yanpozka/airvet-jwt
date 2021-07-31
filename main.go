@@ -57,16 +57,18 @@ func main() {
 		}
 	}()
 
-	// blocks until we get a terminal OS signal or an explicit /shutdown request
+	// blocks until we get a kill/interrupt OS signal
 	select {
 	case osSignal := <-ch:
 		log.Printf("Got OS signal: '%v', shuting down the server with timeout: %v", osSignal, shutdownTimeout)
 	}
 
-	srv.SetKeepAlivesEnabled(false)
+	log.Println("Closing db ...")
+	d.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+	srv.SetKeepAlivesEnabled(false)
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Failed to shutdown the server: %v", err)

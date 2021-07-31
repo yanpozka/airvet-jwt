@@ -5,9 +5,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/yanpozka/airvet-jwt/dao"
 )
+
+const jwtAddExpiry = 30 * 24 * time.Hour // 1 month
 
 type API struct {
 	db *dao.DAO
@@ -34,7 +37,7 @@ func (a *API) auth(w http.ResponseWriter, req *http.Request) {
 
 	user, err := a.db.GetUserByEmailPasswd(req.Context(), u.Email, u.Password)
 	if err != nil {
-		if err == dao.UserNotFoundErr {
+		if err == dao.ErrUserNotFound {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		} else {
 			log.Printf("Error getting user from db: %v", err)
@@ -43,9 +46,25 @@ func (a *API) auth(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Println(*user)
+	rsaKey, err := user.GetRSAKey()
+	if err != nil {
+		log.Printf("Error decoding private key: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 
-	http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
+	jwt, err := newJWT(user.Email, rsaKey, time.Now().Add(jwtAddExpiry))
+	if err != nil {
+		log.Printf("Error generating jwt: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	resp := map[string]string{
+		"jwt": jwt,
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func readUserIn(req *http.Request) (*userIn, error) {

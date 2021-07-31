@@ -6,27 +6,48 @@ import (
 	"fmt"
 )
 
-const createTableSQL = `CREATE TABLE IF NOT EXISTS user (id integer not null primary key, email text, name text, location text, password text)`
+const createTableAndEmptySQL = `CREATE TABLE IF NOT EXISTS user (
+	id integer not null primary key,
+	email text,
+	name text,
+	location text,
+	password text,
+	privatekey text,
+	publickey text); DELETE FROM user;`
 
-// Data Access Object abstracts DB manipulation
+// DAO is a Data Access Object abstracts DB manipulation
 type DAO struct {
 	db *sql.DB
 }
 
+// NewDAO creates a new DAO object
 func NewDAO(path string) (*DAO, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open sqlite db: %+w", err)
+		return nil, fmt.Errorf("failed to open sqlite db: %w", err)
 	}
 
 	return &DAO{db: db}, nil
 }
 
+func (d *DAO) Close() {
+	d.db.Close()
+}
+
+// InitDB creates and seeds the user table
 func (d *DAO) InitDB(ctx context.Context) error {
-	if _, err := d.db.ExecContext(ctx, createTableSQL); err != nil {
-		return fmt.Errorf("failed to create table user: %+w", err)
+	if _, err := d.db.ExecContext(ctx, createTableAndEmptySQL); err != nil {
+		return fmt.Errorf("failed to create table user: %w", err)
 	}
 
+	privatekey1, publickey1, err := generatePrivatePublicKeyPair()
+	if err != nil {
+		return err
+	}
+	privatekey2, publickey2, err := generatePrivatePublicKeyPair()
+	if err != nil {
+		return err
+	}
 	users := []*User{
 		{
 			ID:           1,
@@ -34,6 +55,17 @@ func (d *DAO) InitDB(ctx context.Context) error {
 			Name:         "Admin",
 			Location:     "somewhere",
 			PasswordHash: "a9f4edc6c0f72ed3156a540dab48828f196066b32f9e41469b61069dcf62b80b", // "Admin-pass"
+			PrivateKey:   privatekey1,
+			PublicKey:    publickey1,
+		},
+		{
+			ID:           2,
+			Email:        "coolvet@airvet.com",
+			Name:         "Cool Vet",
+			Location:     "Best Pet Veterinary Clinic",
+			PasswordHash: "0b04099717ab5a1bf87bccf2b1253bbf1206cde80c91a6cc30d62a3d5d82cae5", // "Cool_pass123"
+			PrivateKey:   privatekey2,
+			PublicKey:    publickey2,
 		},
 	}
 	for _, u := range users {
