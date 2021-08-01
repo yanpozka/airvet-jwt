@@ -8,6 +8,9 @@ import (
 	"github.com/square/go-jose/v3"
 )
 
+// we could also use RS512
+const jwkAlgo = "RS256"
+
 func (a *API) getJWKS(w http.ResponseWriter, req *http.Request) {
 	jwksDB, err := a.db.GetJWKS(req.Context())
 	if err != nil {
@@ -29,7 +32,7 @@ func (a *API) getJWKS(w http.ResponseWriter, req *http.Request) {
 
 		jwk := jose.JSONWebKey{
 			Key:       publicKey,
-			Algorithm: "RS256",
+			Algorithm: jwkAlgo,
 			Use:       "sig",
 		}
 
