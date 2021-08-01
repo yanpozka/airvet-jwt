@@ -32,6 +32,8 @@ func newJWT(email string, priKey *rsa.PrivateKey, expireAt time.Time) (string, e
 	}
 	opts := jose.SignerOptions{}
 	opts.WithType("JWT")
+	// TODO: have a valid domain so jwt.io can verify our JWT :)
+	opts.WithHeader("jku", "http://localhost:8080/jwks")
 
 	signKey := jose.SigningKey{
 		Algorithm: jose.RS256,

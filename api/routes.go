@@ -15,6 +15,7 @@ func (a *API) GetRoutes() http.Handler {
 	mux.Handle("/user", loggerPanic(httpMethod(http.MethodGet, http.HandlerFunc(a.getUser))))
 
 	// special endpoint that should be in a different server
+	// and will be used as `jku` header
 	mux.Handle("/jwks", loggerPanic(httpMethod(http.MethodGet, http.HandlerFunc(a.getJWKS))))
 
 	return mux
