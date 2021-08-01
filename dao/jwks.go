@@ -10,13 +10,14 @@ import (
 )
 
 const (
-	insertJWKSQL  = "INSERT INTO jwks(privatekey, publickey) VALUES($1, $2)"
-	selectJWKSSQL = "SELECT privatekey, publickey FROM jwks"
+	insertJWKSQL  = "INSERT INTO jwks(privatekey, publickey, expiresat) VALUES($1, $2, $3)"
+	selectJWKSSQL = "SELECT privatekey, publickey, expiresat FROM jwks ORDER BY expiresat DESC"
 )
 
 type JWK struct {
 	PrivateKey string
 	PublicKey  string
+	ExpiresAt  int64
 
 	privateRSAKey *rsa.PrivateKey
 }
@@ -39,7 +40,7 @@ func (j *JWK) GetRSAKey() (*rsa.PrivateKey, error) {
 
 // InsertJWK adds a JWK par
 func (d *DAO) InsertJWKS(ctx context.Context, j *JWK) error {
-	result, err := d.db.ExecContext(ctx, insertJWKSQL, j.PrivateKey, j.PublicKey)
+	result, err := d.db.ExecContext(ctx, insertJWKSQL, j.PrivateKey, j.PublicKey, j.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert jwks: %+w", err)
 	}
@@ -60,7 +61,7 @@ func (d *DAO) GetJWKS(ctx context.Context) ([]*JWK, error) {
 	var results []*JWK
 	for rows.Next() {
 		j := new(JWK)
-		if err := rows.Scan(&j.PrivateKey, &j.PublicKey); err != nil {
+		if err := rows.Scan(&j.PrivateKey, &j.PublicKey, &j.ExpiresAt); err != nil {
 			return nil, fmt.Errorf("failed to scan jwk: %w", err)
 		}
 		results = append(results, j)

@@ -14,6 +14,9 @@ func (a *API) GetRoutes() http.Handler {
 	mux.Handle("/auth", loggerPanic(httpMethod(http.MethodPost, http.HandlerFunc(a.auth))))
 	mux.Handle("/user", loggerPanic(httpMethod(http.MethodGet, http.HandlerFunc(a.getUser))))
 
+	// special endpoint that should be in a different server
+	mux.Handle("/jwks", loggerPanic(httpMethod(http.MethodGet, http.HandlerFunc(a.getJWKS))))
+
 	return mux
 }
 
