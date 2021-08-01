@@ -7,10 +7,12 @@ import (
 	"time"
 )
 
+// GetRoutes returns a muxer with all the routes
 func (a *API) GetRoutes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("/auth", loggerPanic(httpMethod(http.MethodPost, http.HandlerFunc(a.auth))))
+	mux.Handle("/user", loggerPanic(httpMethod(http.MethodGet, http.HandlerFunc(a.getUser))))
 
 	return mux
 }

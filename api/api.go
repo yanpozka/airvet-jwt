@@ -5,13 +5,19 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/yanpozka/airvet-jwt/dao"
 )
 
-const jwtAddExpiry = 30 * 24 * time.Hour // 1 month
+const (
+	jwtAddExpiry = 30 * 24 * time.Hour // 1 month
 
+	authorizationHeader = "Authorization"
+)
+
+// API represents the whole api
 type API struct {
 	db *dao.DAO
 }
@@ -21,10 +27,49 @@ type userIn struct {
 	Password string `json:"password"`
 }
 
+// NewAPI creates a new API
 func NewAPI(db *dao.DAO) *API {
 	return &API{
 		db: db,
 	}
+}
+
+func (a *API) getUser(w http.ResponseWriter, req *http.Request) {
+	authHeader := req.Header.Get(authorizationHeader)
+	parts := strings.Split(authHeader, " ")
+	if len(parts) < 2 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	signedJWT := parts[1]
+
+	jwks, err := a.db.GetJWKS(req.Context())
+	if len(jwks) == 0 || err != nil {
+		log.Printf("We don't have a JWKS, error?: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	jwk := jwks[0] // always get the first one
+	rsaKey, err := jwk.GetRSAKey()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	uc, err := parseJWT(signedJWT, &rsaKey.PublicKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := a.db.GetUserByEmail(req.Context(), uc.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
 }
 
 func (a *API) auth(w http.ResponseWriter, req *http.Request) {
@@ -46,7 +91,15 @@ func (a *API) auth(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	rsaKey, err := user.GetRSAKey()
+	jwks, err := a.db.GetJWKS(req.Context())
+	if len(jwks) == 0 || err != nil {
+		log.Printf("We don't have a JWKS, error?: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	jwk := jwks[0] // always get the first one
+	rsaKey, err := jwk.GetRSAKey()
 	if err != nil {
 		log.Printf("Error decoding private key: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
