@@ -11,7 +11,7 @@ make run
 
 
 ### Usage:
-Get a JWT token with any of the users:
+Get a JWT token with any of the users, using the `POST /auth` endpoint:
 if you have jq installed (easy way):
 
 ```
@@ -25,7 +25,7 @@ curl -i -d '{ "email": "admin@airvet.com", "password": "Admin-pass" }' localhost
 curl -i -d '{ "email": "coolvet@airvet.com", "password": "Cool_pass123" }' localhost:8080/auth
 ```
 
-Copy the JWT and paste it in the follow command and you should get the user profile:
+Copy the JWT and paste it in the follow command and you should get the user profile, using the `GET /user` endpoint:
 ```
 curl -i -H "Authorization: Bearer $JWT" localhost:8080/user
 ```
@@ -36,6 +36,7 @@ The JWK (private and public keys) are generated when we run the server
 
 
 #### Get all JWKS:
+Hit the `GET /jwks` endpoint
 ```
 curl -i localhost:8080/jwks
 ```
