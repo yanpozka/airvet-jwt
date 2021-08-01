@@ -30,6 +30,10 @@ Copy the JWT and paste it in the follow command and you should get the user prof
 curl -i -H "Authorization: Bearer $JWT" localhost:8080/user
 ```
 
+### JWKs:
+
+The JWK (private and public keys) are generated when we run the server 
+
 
 #### Get all JWKS:
 ```
