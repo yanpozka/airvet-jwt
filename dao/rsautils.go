@@ -13,9 +13,12 @@ const (
 	keySize = 2048
 
 	rsaPrivateKeyType = "RSA PRIVATE KEY"
+	rsaPublicKeyType  = "PUBLIC KEY"
 )
 
-func generatePrivatePublicKeyPair() (string, string, error) {
+// GeneratePrivatePublicKeyPair returns a private and public key pair
+// TODO: move this function to its own pkg
+func GeneratePrivatePublicKeyPair() (string, string, error) {
 	privatekey, err := rsa.GenerateKey(rand.Reader, keySize)
 	if err != nil {
 		return "", "", err
@@ -42,7 +45,7 @@ func generatePrivatePublicKeyPair() (string, string, error) {
 			return "", "", err
 		}
 		publicKeyBlock := &pem.Block{
-			Type:  "PUBLIC KEY",
+			Type:  rsaPublicKeyType,
 			Bytes: publicKeyBytes,
 		}
 

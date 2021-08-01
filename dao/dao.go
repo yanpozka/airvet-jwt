@@ -1,9 +1,12 @@
 package dao
 
 import (
+	_ "github.com/mattn/go-sqlite3"
+
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 const (
@@ -20,6 +23,9 @@ const (
 	expiresAt integer); DELETE FROM jwks;`
 )
 
+// JWKExpiration defines how long a JWK should be active
+const JWKExpiration = 365 * 24 * time.Hour // a year
+
 // DAO is a Data Access Object abstracts DB manipulation
 type DAO struct {
 	db *sql.DB
@@ -35,6 +41,7 @@ func NewDAO(path string) (*DAO, error) {
 	return &DAO{db: db}, nil
 }
 
+// Close closes the DB connection
 func (d *DAO) Close() {
 	d.db.Close()
 }
@@ -48,11 +55,16 @@ func (d *DAO) InitDB(ctx context.Context) error {
 		return fmt.Errorf("failed to create table user: %w", err)
 	}
 
-	privatekey, publickey, err := generatePrivatePublicKeyPair()
+	privatekey, publickey, err := GeneratePrivatePublicKeyPair()
 	if err != nil {
 		return err
 	}
-	if err := d.InsertJWKS(ctx, &JWK{PrivateKey: privatekey, PublicKey: publickey}); err != nil {
+	jwk := &JWK{
+		PrivateKey: privatekey,
+		PublicKey:  publickey,
+		ExpiresAt:  time.Now().Add(JWKExpiration).Unix(),
+	}
+	if err := d.InsertJWK(ctx, jwk); err != nil {
 		return err
 	}
 

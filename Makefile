@@ -3,3 +3,6 @@ run:
 
 build:
 	go build -o server main.go
+
+rotate:
+	go run rotateKeys.go

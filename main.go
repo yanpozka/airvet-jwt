@@ -8,8 +8,6 @@ import (
 	"os/signal"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/yanpozka/airvet-jwt/api"
 	"github.com/yanpozka/airvet-jwt/dao"
 )
@@ -24,6 +22,8 @@ const (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	d, err := dao.NewDAO(dbPath)
 	if err != nil {
 		log.Panic(err)
@@ -34,8 +34,6 @@ func main() {
 	}
 
 	a := api.NewAPI(d)
-
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	addr := ":" + getEnvStr("PORT", "8080")
 	srv := &http.Server{

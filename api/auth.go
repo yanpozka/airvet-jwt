@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	jwtAddExpiry = 30 * 24 * time.Hour // 1 month
+	jwtExpiration = 30 * 24 * time.Hour // 1 month
 
 	authorizationHeader = "Authorization"
 )
@@ -42,20 +42,21 @@ func (a *API) auth(w http.ResponseWriter, req *http.Request) {
 	}
 
 	jwk := jwks[0] // always get the first one
-	rsaKey, err := jwk.GetRSAKey()
+	rsaKey, err := jwk.GetRSAPrivateKey()
 	if err != nil {
 		log.Printf("Error decoding private key: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	jwt, err := newJWT(user.Email, rsaKey, time.Now().Add(jwtAddExpiry))
+	jwt, err := newJWT(user.Email, rsaKey, time.Now().Add(jwtExpiration))
 	if err != nil {
 		log.Printf("Error generating jwt: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	resp := map[string]string{
 		"jwt": jwt,

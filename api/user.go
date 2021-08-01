@@ -29,8 +29,8 @@ func (a *API) getUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	jwk := jwks[0] // always get the first one
-	rsaKey, err := jwk.GetRSAKey()
+	jwk := jwks[0] // always get the first one as they come ordered by expiration time
+	rsaKey, err := jwk.GetRSAPrivateKey()
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -47,6 +47,7 @@ func (a *API) getUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(user)
 }

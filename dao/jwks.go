@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"log"
 )
 
 const (
@@ -14,20 +13,23 @@ const (
 	selectJWKSSQL = "SELECT privatekey, publickey, expiresat FROM jwks ORDER BY expiresat DESC"
 )
 
+// JWK represents a JSON Web Key
 type JWK struct {
 	PrivateKey string
 	PublicKey  string
 	ExpiresAt  int64
 
 	privateRSAKey *rsa.PrivateKey
+	publicRSAKey  *rsa.PublicKey
 }
 
-func (j *JWK) GetRSAKey() (*rsa.PrivateKey, error) {
+// GetRSAPrivateKey returns a RSA private key
+func (j *JWK) GetRSAPrivateKey() (*rsa.PrivateKey, error) {
 	if j.privateRSAKey == nil {
 		// parse the private key once
 		block, _ := pem.Decode([]byte(j.PrivateKey))
 		if block == nil || block.Type != rsaPrivateKeyType {
-			log.Fatal("failed to decode PEM block containing private key")
+			return nil, fmt.Errorf("failed to decode PEM block containing %s", rsaPrivateKeyType)
 		}
 		pkey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
@@ -38,8 +40,30 @@ func (j *JWK) GetRSAKey() (*rsa.PrivateKey, error) {
 	return j.privateRSAKey, nil
 }
 
+// GetRSAPublicKey returns a RSA public key
+func (j *JWK) GetRSAPublicKey() (*rsa.PublicKey, error) {
+	if j.publicRSAKey == nil {
+		// parse the private key once
+		block, _ := pem.Decode([]byte(j.PublicKey))
+		if block == nil || block.Type != rsaPublicKeyType {
+			return nil, fmt.Errorf("failed to decode PEM block containing %s", rsaPublicKeyType)
+		}
+		pkey, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		publicRSAKey, isRSAPublicKey := pkey.(*rsa.PublicKey)
+		if !isRSAPublicKey {
+			return nil, fmt.Errorf("failed to convert public key")
+		}
+		j.publicRSAKey = publicRSAKey
+	}
+	return j.publicRSAKey, nil
+}
+
 // InsertJWK adds a JWK par
-func (d *DAO) InsertJWKS(ctx context.Context, j *JWK) error {
+func (d *DAO) InsertJWK(ctx context.Context, j *JWK) error {
 	result, err := d.db.ExecContext(ctx, insertJWKSQL, j.PrivateKey, j.PublicKey, j.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert jwks: %+w", err)
@@ -51,6 +75,7 @@ func (d *DAO) InsertJWKS(ctx context.Context, j *JWK) error {
 	return nil
 }
 
+// GetJWKS returns all JWK ordered by expiration time
 func (d *DAO) GetJWKS(ctx context.Context) ([]*JWK, error) {
 	rows, err := d.db.QueryContext(ctx, selectJWKSSQL)
 	if err != nil {

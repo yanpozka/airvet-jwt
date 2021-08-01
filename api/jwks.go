@@ -21,10 +21,14 @@ func (a *API) getJWKS(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, jwkDB := range jwksDB {
-		rsaKey, _ := jwkDB.GetRSAKey()
+		publicKey, err := jwkDB.GetRSAPublicKey()
+		if err != nil {
+			log.Printf("Error gettings JWK public key: %v", err)
+			continue
+		}
 
 		jwk := jose.JSONWebKey{
-			Key:       &rsaKey.PublicKey,
+			Key:       publicKey,
 			Algorithm: "RS256",
 			Use:       "sig",
 		}
@@ -32,6 +36,7 @@ func (a *API) getJWKS(w http.ResponseWriter, req *http.Request) {
 		jwks.Keys = append(jwks.Keys, jwk)
 	}
 
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(jwks)
 }
