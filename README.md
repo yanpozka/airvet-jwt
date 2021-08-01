@@ -38,7 +38,7 @@ The JWK (private and public keys) are generated when we run the server
 #### Get all JWKS:
 Hit the `GET /jwks` endpoint
 ```
-curl -i localhost:8080/jwks
+curl -i localhost:8080/.well-known/jwks.json
 ```
 
 #### Rotate keys:
@@ -46,4 +46,5 @@ curl -i localhost:8080/jwks
 make rotate
 ```
 
-then call `curl -i localhost:8080/jwks` to get the new JWK
+then call `curl -i localhost:8080/.well-known/jwks.json` to get the new JWK
+
